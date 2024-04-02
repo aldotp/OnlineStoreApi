@@ -8,6 +8,7 @@ To use the Online Store API, ensure you have the following:
 - MySQL: Required for storing product information, user data, and transaction details.
 - Redis: Used for caching and improving API performance.
 - Docker: Required for containerizing the API application.
+- Golang: Required for running the API server.
 - Postman: Required for API testing.
 
 ## Features
