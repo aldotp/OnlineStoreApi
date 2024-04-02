@@ -63,7 +63,7 @@ To use the Online Store API, ensure you have the following:
 3. Run the command `make run` to start the API.
 4. The server will be running on port 8080 locally.
 
-## Test Case Testing
+## Testing
 
 - Export the collection and environment files `.json` located in the `collection` folder to Postman Apps for testing.
 
