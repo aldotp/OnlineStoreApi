@@ -51,6 +51,10 @@ Description: Allows the user to complete the purchase and make payment transacti
 
 - Using Docker-compose.yaml, run: docker-compose up
 - Server running on port 8080 (local) 
+or
+- Using local environment (setup and MySQL, Redis first)
+- Create .env using example.env 
+- make run (to start the api) 
 
 
 ## TestCase Testing  
