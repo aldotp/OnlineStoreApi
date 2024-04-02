@@ -1,0 +1,25 @@
+# Go related files
+*.exe
+*.test
+*.prof
+*.out
+/dist/
+/vendor/
+/Godeps/
+/.vscode/
+/.idea/
+/.DS_Store
+/mysql_data
+
+# Binary and Object files
+*.bin
+*.o
+*.a
+*.so
+
+# Dependency directories
+/vendor/
+/Godeps/
+
+# Environment files
+.env
