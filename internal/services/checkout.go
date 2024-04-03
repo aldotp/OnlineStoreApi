@@ -141,7 +141,7 @@ func (c *checkout) History(ctx context.Context, userID int) ([]model.CheckoutHis
 		checkoutHistoryResponse = append(checkoutHistoryResponse, model.CheckoutHistoryResponse{
 			ID:           order.ID,
 			UserID:       order.UserID,
-			TotalProduct: len(order.OrderDetails),
+			TotalProduct: len(orderDetails),
 			TotalPrice:   order.TotalAmount,
 			CreatedAt:    order.CreatedAt.String(),
 			UpdatedAt:    order.UpdatedAt.String(),
