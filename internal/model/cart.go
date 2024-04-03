@@ -24,3 +24,8 @@ type CheckoutResponse struct {
 	TotalProduct int                `json:"total_product"`
 	TotalPrice   float64            `json:"total_price"`
 }
+
+type ModifyCartRequest struct {
+	ProductID int `json:"product_id"`
+	Quantity  int `json:"quantity"`
+}

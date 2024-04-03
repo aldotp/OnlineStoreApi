@@ -11,6 +11,7 @@ import (
 
 type CheckoutService interface {
 	Checkout(ctx context.Context, userID int) (*model.CheckoutResponse, error)
+	History(ctx context.Context, userID int) ([]model.CheckoutHistoryResponse, error)
 }
 
 type checkout struct {
@@ -105,5 +106,50 @@ func (c *checkout) Checkout(ctx context.Context, userID int) (*model.CheckoutRes
 		TotalProduct: count,
 		TotalPrice:   totalAmount,
 	}, nil
+
+}
+
+func (c *checkout) History(ctx context.Context, userID int) ([]model.CheckoutHistoryResponse, error) {
+
+	orders, err := c.orderRepo.GetOrdersByUserID(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("cannot get orders")
+	}
+
+	var checkoutHistoryResponse []model.CheckoutHistoryResponse
+
+	for _, order := range orders {
+
+		orderDetails, err := c.orderDetailRepo.GetOrderDetailsByOrderID(ctx, order.ID)
+		if err != nil {
+			return nil, fmt.Errorf("cannot get order details")
+		}
+
+		var orderDetailResponses []*model.OrderDetail
+
+		for _, detail := range orderDetails {
+			orderDetailResponses = append(orderDetailResponses, &model.OrderDetail{
+				ID:          detail.ID,
+				ProductID:   detail.ProductID,
+				Name:        detail.Product.Name,
+				Description: detail.Product.Description,
+				Quantity:    detail.Quantity,
+				Price:       detail.Price,
+			})
+		}
+
+		checkoutHistoryResponse = append(checkoutHistoryResponse, model.CheckoutHistoryResponse{
+			ID:           order.ID,
+			UserID:       order.UserID,
+			TotalProduct: len(order.OrderDetails),
+			TotalPrice:   order.TotalAmount,
+			CreatedAt:    order.CreatedAt.String(),
+			UpdatedAt:    order.UpdatedAt.String(),
+			Status:       order.Status,
+			OrderDetails: orderDetailResponses,
+		})
+	}
+
+	return checkoutHistoryResponse, nil
 
 }

@@ -39,15 +39,16 @@ func (route *Route) Router() *mux.Router {
 
 	// services
 	userService := services.NewUser(userRepo, route.config)
-	productService := services.NewProduct(productRepo, categoryRepo)
+	productService := services.NewProduct(productRepo, categoryRepo, redisInstance)
 	paymentService := services.NewPayment()
-	cartService := services.NewCart(cartRepo, cartItemsRepo)
+	cartService := services.NewCart(cartRepo, cartItemsRepo, productRepo)
 	checkoutService := services.NewCheckout(orderRepo, cartRepo, orderDetailRepo, paymentService)
+	categoryService := services.NewCategory(redisInstance, categoryRepo)
 
 	// handlers
 	userHandler := handler.NewUserHandler(userService)
 	productHandler := handler.NewProductHandler(productService)
-	categoryHandler := handler.NewCategoryHandler(categoryRepo, redisInstance)
+	categoryHandler := handler.NewCategoryHandler(categoryService, categoryRepo, redisInstance)
 	cartHandler := handler.NewCartHandler(cartService, cartRepo, cartItemsRepo, productRepo)
 	checkoutHandler := handler.NewCheckoutHandler(checkoutService)
 
@@ -64,25 +65,35 @@ func (route *Route) Router() *mux.Router {
 	public.HandleFunc("/register", userHandler.RegisterUser).Methods("POST")
 
 	jwt := middleware.NewJWT(route.config)
-
 	protected.Use(jwt.AuthMiddleware)
-	protected.HandleFunc("/products/{category}", productHandler.GetProductsByCategory).Methods("GET")
-	protected.HandleFunc("/product", productHandler.StoreProducts).Methods("POST")
 
+	protected.HandleFunc("/products/category/{id}", productHandler.GetProductsByCategory).Methods("GET")
+	protected.HandleFunc("/product/{id}", productHandler.UpdateProduct).Methods("PUT")
+	protected.HandleFunc("/product/{id}", productHandler.GetProductByID).Methods("GET")
+	protected.HandleFunc("/product", productHandler.StoreProducts).Methods("POST")
+	protected.HandleFunc("/product/{id}", productHandler.DeleteProduct).Methods("DELETE")
+	protected.HandleFunc("/products", productHandler.GetProducts).Methods("GET")
+
+	protected.HandleFunc("/category/{id}", categoryHandler.GetCategoryByID).Methods("GET")
+	protected.HandleFunc("/categories", categoryHandler.GetCategories).Methods("GET")
+	protected.HandleFunc("/category/{id}", categoryHandler.DeleteCategory).Methods("DELETE")
+	protected.HandleFunc("/category/{id}", categoryHandler.UpdateCategory).Methods("PUT")
 	protected.HandleFunc("/category", categoryHandler.StoreCategory).Methods("POST")
-	protected.HandleFunc("/categories", categoryHandler.GetCategory).Methods("GET")
 
 	protected.HandleFunc("/cart", cartHandler.Cart).Methods("GET")
 	protected.HandleFunc("/cart", cartHandler.AddToCart).Methods("POST")
-	protected.HandleFunc("/cart/{productID}", cartHandler.DeleteProductFromCart).Methods("DELETE")
+	protected.HandleFunc("/cart/product/{id}", cartHandler.DeleteProductFromCart).Methods("DELETE")
+	protected.HandleFunc("/cart", cartHandler.EmptyCart).Methods("DELETE")
+	protected.HandleFunc("/cart/product/{id}", cartHandler.ModifyCart).Methods("PUT")
 
 	protected.HandleFunc("/checkout", checkoutHandler.CheckoutHandler).Methods("POST")
+	protected.HandleFunc("/checkout/history", checkoutHandler.CheckoutHistory).Methods("GET")
 
 	return r
 }
 
 func (route *Route) Run() {
 	router := route.Router()
-	log.Printf("Server OnlineStoreAPI is running on %s:%s", route.config.Host, route.config.WebPort)
+	log.Printf("Server is running on %s:%s", route.config.Host, route.config.WebPort)
 	http.ListenAndServe(fmt.Sprintf(":%s", route.config.WebPort), router)
 }

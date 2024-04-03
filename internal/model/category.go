@@ -11,3 +11,8 @@ type ProductByCategoryResponse struct {
 	CategoryName string           `json:"category_name,omitempty"`
 	Products     []entity.Product `json:"products"`
 }
+
+type UpdateCategoryRequest struct {
+	CategoryID int    `json:"category_id"`
+	Name       string `json:"name"`
+}

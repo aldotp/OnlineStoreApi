@@ -93,9 +93,8 @@ func (r *CartRepository) GetCartItemsByUserID(ctx context.Context, userID int) (
 	return cartItems, nil
 }
 
-// ClearCart clears the user's cart in the database.
 func (r *CartRepository) ClearCart(ctx context.Context, userID int) error {
-	// Execute a DELETE query to clear the user's cart
+
 	_, err := r.db.ExecContext(ctx, "DELETE FROM cart_items WHERE cart_id IN (SELECT id FROM carts WHERE user_id = ?)", userID)
 	if err != nil {
 		return err
@@ -104,20 +103,20 @@ func (r *CartRepository) ClearCart(ctx context.Context, userID int) error {
 	return nil
 }
 func (r *CartRepository) ClearCartWithTransaction(ctx context.Context, tx *sql.Tx, userID int) error {
-	// Execute a DELETE query to clear the user's cart
+
 	_, err := tx.ExecContext(ctx, "DELETE FROM cart_items WHERE cart_id IN (SELECT id FROM carts WHERE user_id = ?)", userID)
 	return err
 }
 
-// GetCartItemByUserIDAndProductID retrieves a cart item by user ID and product ID.
 func (r *CartRepository) GetCartItemByUserIDAndProductID(ctx context.Context, userID, productID int) (*entity.CartItem, error) {
+
 	query := "SELECT id, cart_id, product_id, quantity, created_at, updated_at FROM cart_items WHERE cart_id IN (SELECT id FROM carts WHERE user_id = ?) AND product_id = ?"
 	row := r.db.QueryRowContext(ctx, query, userID, productID)
 
 	var cartItem entity.CartItem
 	if err := row.Scan(&cartItem.ID, &cartItem.CartID, &cartItem.ProductID, &cartItem.Quantity, &cartItem.CreatedAt, &cartItem.UpdatedAt); err != nil {
 		if err == sql.ErrNoRows {
-			return nil, nil // Cart item not found
+			return nil, nil
 		}
 		return nil, err
 	}
@@ -125,12 +124,40 @@ func (r *CartRepository) GetCartItemByUserIDAndProductID(ctx context.Context, us
 	return &cartItem, nil
 }
 
-// UpdateCartItem updates a cart item in the repository.
 func (r *CartRepository) UpdateCartItem(ctx context.Context, item *entity.CartItem) error {
 	query := "UPDATE cart_items SET quantity = ? WHERE id = ?"
 	_, err := r.db.ExecContext(ctx, query, item.Quantity, item.ID)
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func (r *CartRepository) EmptyCart(ctx context.Context, cartID int) error {
+
+	_, err := r.db.ExecContext(ctx, "DELETE FROM cart_items WHERE cart_id = ? ", cartID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *CartRepository) ModifyCart(ctx context.Context, cartID int, productID int, quantity int) error {
+
+	if quantity == 0 {
+		_, err := r.db.ExecContext(ctx, "DELETE FROM cart_items WHERE cart_id = ? AND product_id = ?", cartID, productID)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	_, err := r.db.ExecContext(ctx, "UPDATE cart_items SET quantity = ? WHERE cart_id = ? AND product_id = ?", quantity, cartID, productID)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

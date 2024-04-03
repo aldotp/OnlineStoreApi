@@ -17,6 +17,7 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 }
 
 func (u UserRepository) GetUserByID(id int) (*entity.User, error) {
+
 	row := u.db.QueryRow("SELECT id, username, password, email, created_at, updated_at FROM users WHERE id = ?", id)
 	var user entity.User
 	if err := row.Scan(&user.ID, &user.Username, &user.Email); err != nil {
@@ -24,6 +25,7 @@ func (u UserRepository) GetUserByID(id int) (*entity.User, error) {
 	}
 
 	return &user, nil
+
 }
 
 func (u UserRepository) CreateUser(ctx context.Context, cust entity.User) (*entity.User, error) {
@@ -56,9 +58,11 @@ func (u UserRepository) CreateUser(ctx context.Context, cust entity.User) (*enti
 	}
 
 	return insertedUser, tx.Commit()
+
 }
 
 func (u UserRepository) GetUserByUsername(ctx context.Context, username string) (*entity.User, error) {
+
 	row := u.db.QueryRowContext(ctx, "SELECT id, username, password, email, created_at, updated_at FROM users WHERE username = ?", username)
 	var user entity.User
 
@@ -71,4 +75,5 @@ func (u UserRepository) GetUserByUsername(ctx context.Context, username string) 
 	}
 
 	return &user, nil
+
 }

@@ -3,26 +3,29 @@ package handler
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
-	"github.com/aldotp/OnlineStore/internal/entity"
 	"github.com/aldotp/OnlineStore/internal/helper"
 	"github.com/aldotp/OnlineStore/internal/model"
 	"github.com/aldotp/OnlineStore/internal/repositories"
+	"github.com/aldotp/OnlineStore/internal/services"
 	"github.com/go-redis/redis/v8"
+	"github.com/gorilla/mux"
 )
 
 type CategoryHandler struct {
-	repo  *repositories.CategoryRepository
-	redis *redis.Client
+	repo        *repositories.CategoryRepository
+	redis       *redis.Client
+	categorySvc services.CategoryService
 }
 
-func NewCategoryHandler(repo *repositories.CategoryRepository, redis *redis.Client) *CategoryHandler {
+func NewCategoryHandler(categorySvc services.CategoryService, repo *repositories.CategoryRepository, redis *redis.Client) *CategoryHandler {
 	return &CategoryHandler{
-		repo:  repo,
-		redis: redis,
+		repo:        repo,
+		redis:       redis,
+		categorySvc: categorySvc,
 	}
 }
 
@@ -40,8 +43,8 @@ func (p *CategoryHandler) StoreCategory(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	request := new(model.CategoryRequest)
-	err = json.NewDecoder(r.Body).Decode(request)
+	var request model.CategoryRequest
+	err = json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
 		helper.ErrorJSON(helper.Response{
 			Code:    http.StatusBadRequest,
@@ -50,41 +53,104 @@ func (p *CategoryHandler) StoreCategory(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	category, err := p.repo.StoreCategory(ctx, &entity.Category{
-		Name: request.Name,
-	})
+	response, err := p.categorySvc.StoreCategory(ctx, request)
 	if err != nil {
 		helper.ErrorJSON(helper.Response{
-			Code:    http.StatusInternalServerError,
-			Message: "cannot store category",
-		}, w, http.StatusInternalServerError)
+			Code:    http.StatusBadRequest,
+			Message: err.Error(),
+		}, w, http.StatusBadRequest)
 		return
 	}
-
-	// Store category in Redis cache
-	categoryJSON, _ := json.Marshal(category)
-
-	key := fmt.Sprintf("category:%d", category.ID)
-	err = p.redis.Set(ctx, key, categoryJSON, 24*time.Hour).Err()
-	if err != nil {
-		helper.ErrorJSON(helper.Response{
-			Code:    http.StatusInternalServerError,
-			Message: "cannot store category in redis",
-		}, w, http.StatusInternalServerError)
-		return
-	}
-
-	p.redis.Del(ctx, "categories")
 
 	helper.WriteJSON(w, http.StatusCreated, helper.Response{
 		Code:    http.StatusCreated,
+		Message: "Success",
+		Data:    response,
+	})
+
+}
+
+func (p *CategoryHandler) GetCategories(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	_, err := helper.GetUserCtx(ctx)
+	if err != nil {
+		helper.ErrorJSON(helper.Response{
+			Code:    http.StatusUnauthorized,
+			Message: "unauthorized",
+		}, w, http.StatusUnauthorized)
+		return
+	}
+
+	category, err := p.categorySvc.GetCategories(ctx)
+	if err != nil {
+		helper.ErrorJSON(helper.Response{
+			Code:    http.StatusInternalServerError,
+			Message: err.Error(),
+		}, w, http.StatusInternalServerError)
+		return
+	}
+
+	helper.WriteJSON(w, http.StatusOK, helper.Response{
+		Code:    http.StatusOK,
+		Message: "Success",
+		Data:    category,
+	})
+}
+
+func (p *CategoryHandler) GetCategoryByID(w http.ResponseWriter, r *http.Request) {
+
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	_, err := helper.GetUserCtx(ctx)
+	if err != nil {
+		helper.ErrorJSON(helper.Response{
+			Code:    http.StatusUnauthorized,
+			Message: "unauthorized",
+		}, w, http.StatusUnauthorized)
+		return
+	}
+
+	paramID := mux.Vars(r)["id"]
+
+	id, err := strconv.Atoi(paramID)
+	if err != nil {
+		helper.ErrorJSON(helper.Response{
+			Code:    http.StatusBadRequest,
+			Message: "invalid id",
+		}, w, http.StatusBadRequest)
+		return
+	}
+
+	category, err := p.categorySvc.GetCategoryByID(ctx, id)
+	if err != nil {
+		helper.ErrorJSON(helper.Response{
+			Code:    http.StatusInternalServerError,
+			Message: err.Error(),
+		}, w, http.StatusInternalServerError)
+		return
+	}
+
+	if category == nil {
+		helper.ErrorJSON(helper.Response{
+			Code:    http.StatusNotFound,
+			Message: "category not found",
+		}, w, http.StatusNotFound)
+		return
+	}
+
+	helper.WriteJSON(w, http.StatusOK, helper.Response{
+		Code:    http.StatusOK,
 		Message: "Success",
 		Data:    category,
 	})
 
 }
 
-func (p *CategoryHandler) GetCategory(w http.ResponseWriter, r *http.Request) {
+func (p *CategoryHandler) DeleteCategory(w http.ResponseWriter, r *http.Request) {
+
 	ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
 	defer cancel()
 
@@ -97,48 +163,22 @@ func (p *CategoryHandler) GetCategory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cachedCategories, err := p.redis.Get(ctx, "categories").Result()
-	if err == redis.Nil {
-		category, err := p.repo.GetAllCategory(ctx)
-		if err != nil {
-			helper.ErrorJSON(helper.Response{
-				Code:    http.StatusInternalServerError,
-				Message: "cannot get all category",
-			}, w, http.StatusInternalServerError)
-			return
-		}
+	paramID := mux.Vars(r)["id"]
 
-		categoryJSON, _ := json.Marshal(category)
-		err = p.redis.Set(ctx, "categories", categoryJSON, 24*time.Hour).Err()
-		if err != nil {
-			helper.ErrorJSON(helper.Response{
-				Code:    http.StatusInternalServerError,
-				Message: "cannot store categories in redis",
-			}, w, http.StatusInternalServerError)
-			return
-		}
-
-		helper.WriteJSON(w, http.StatusOK, helper.Response{
-			Code:    http.StatusOK,
-			Message: "Success",
-			Data:    category,
-		})
-		return
-
-	} else if err != nil {
+	id, err := strconv.Atoi(paramID)
+	if err != nil {
 		helper.ErrorJSON(helper.Response{
-			Code:    http.StatusInternalServerError,
-			Message: "cannot get categories from redis",
-		}, w, http.StatusInternalServerError)
+			Code:    http.StatusBadRequest,
+			Message: "invalid id",
+		}, w, http.StatusBadRequest)
 		return
 	}
 
-	var category []entity.Category
-	err = json.Unmarshal([]byte(cachedCategories), &category)
+	err = p.categorySvc.DeleteCategoryByID(ctx, id)
 	if err != nil {
 		helper.ErrorJSON(helper.Response{
 			Code:    http.StatusInternalServerError,
-			Message: "cannot unmarshal categories",
+			Message: "cannot delete category",
 		}, w, http.StatusInternalServerError)
 		return
 	}
@@ -146,6 +186,60 @@ func (p *CategoryHandler) GetCategory(w http.ResponseWriter, r *http.Request) {
 	helper.WriteJSON(w, http.StatusOK, helper.Response{
 		Code:    http.StatusOK,
 		Message: "Success",
-		Data:    category,
 	})
+
+}
+
+func (p *CategoryHandler) UpdateCategory(w http.ResponseWriter, r *http.Request) {
+
+	ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
+	defer cancel()
+
+	_, err := helper.GetUserCtx(ctx)
+	if err != nil {
+		helper.ErrorJSON(helper.Response{
+			Code:    http.StatusUnauthorized,
+			Message: "unauthorized",
+		}, w, http.StatusUnauthorized)
+		return
+	}
+
+	paramID := mux.Vars(r)["id"]
+
+	id, err := strconv.Atoi(paramID)
+	if err != nil {
+		helper.ErrorJSON(helper.Response{
+			Code:    http.StatusBadRequest,
+			Message: "invalid id",
+		}, w, http.StatusBadRequest)
+		return
+	}
+
+	var request model.UpdateCategoryRequest
+
+	err = json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		helper.ErrorJSON(helper.Response{
+			Code:    http.StatusBadRequest,
+			Message: "invalid json body",
+		}, w, http.StatusBadRequest)
+		return
+	}
+
+	request.CategoryID = id
+
+	err = p.categorySvc.UpdateCategory(ctx, request)
+	if err != nil {
+		helper.ErrorJSON(helper.Response{
+			Code:    http.StatusInternalServerError,
+			Message: "cannot update category",
+		}, w, http.StatusInternalServerError)
+		return
+	}
+
+	helper.WriteJSON(w, http.StatusOK, helper.Response{
+		Code:    http.StatusOK,
+		Message: "Success Update Category",
+	})
+
 }

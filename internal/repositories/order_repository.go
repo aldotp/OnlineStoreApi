@@ -73,3 +73,26 @@ func (r *OrderRepository) UpdateOrderStatusWithTransaction(ctx context.Context, 
 	return err
 
 }
+
+func (r *OrderRepository) GetOrdersByUserID(ctx context.Context, userID int) ([]entity.Order, error) {
+
+	rows, err := r.db.QueryContext(ctx, "SELECT id, user_id, total_amount, status, created_at, updated_at FROM orders WHERE user_id = ?", userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var orders []entity.Order
+
+	for rows.Next() {
+		var order entity.Order
+		err := rows.Scan(&order.ID, &order.UserID, &order.TotalAmount, &order.Status, &order.CreatedAt, &order.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+
+		orders = append(orders, order)
+	}
+
+	return orders, nil
+}

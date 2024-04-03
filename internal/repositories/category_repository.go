@@ -17,6 +17,7 @@ func NewCategoryRepository(db *sql.DB) *CategoryRepository {
 }
 
 func (c *CategoryRepository) GetCategoryByName(ctx context.Context, name string) (*entity.Category, error) {
+
 	row := c.db.QueryRowContext(ctx, "SELECT id, name, created_at, updated_at FROM categories WHERE name = ?", name)
 	var category entity.Category
 	if err := row.Scan(&category.ID, &category.Name, &category.CreatedAt, &category.UpdatedAt); err != nil {
@@ -24,6 +25,7 @@ func (c *CategoryRepository) GetCategoryByName(ctx context.Context, name string)
 	}
 
 	return &category, nil
+
 }
 
 func (c *CategoryRepository) GetCategoryByID(ctx context.Context, id int) (*entity.Category, error) {
@@ -39,6 +41,7 @@ func (c *CategoryRepository) GetCategoryByID(ctx context.Context, id int) (*enti
 	}
 
 	return &category, nil
+
 }
 
 func (c *CategoryRepository) StoreCategory(ctx context.Context, category *entity.Category) (*entity.Category, error) {
@@ -57,6 +60,7 @@ func (c *CategoryRepository) StoreCategory(ctx context.Context, category *entity
 	}
 
 	return &insertedCategory, nil
+
 }
 
 func (c *CategoryRepository) GetAllCategory(ctx context.Context) ([]entity.Category, error) {
@@ -82,4 +86,24 @@ func (c *CategoryRepository) GetAllCategory(ctx context.Context) ([]entity.Categ
 
 	return categories, nil
 
+}
+
+func (c *CategoryRepository) UpdateCategory(ctx context.Context, category *entity.Category) error {
+
+	_, err := c.db.ExecContext(ctx, "UPDATE categories SET name = ?, updated_at = ? WHERE id = ?", category.Name, time.Now().UTC(), category.ID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *CategoryRepository) DeleteCategoryByID(ctx context.Context, id int) error {
+
+	_, err := c.db.ExecContext(ctx, "DELETE FROM categories WHERE id = ?", id)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

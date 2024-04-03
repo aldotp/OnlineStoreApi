@@ -13,41 +13,56 @@ To use the Online Store API, ensure you have the following:
 
 ## Features
 
-1. **User Authentication (Login and Registration)**
-   - **Endpoint:** `/login`, `/register`
-   - **Method:** POST
-   - **Description:** Provides endpoints for user login and registration.
+1. **User Authentication**
+   - **Login:** `/login` (POST)
+     - Description: Endpoint for user login.
+   - **Registration:** `/register` (POST)
+     - Description: Endpoint for user registration.
 
-2. **View Product List by Product Category**
-   - **Endpoint:** `/products?category=`
-   - **Method:** GET
-   - **Description:** Retrieves a list of products based on the specified category.
+2. **Product Management**
+   - **Get Products by Category:** `/products/category/{id}` (GET)
+     - Description: Retrieves products based on the specified category.
+   - **Update Product:** `/product/{id}` (PUT)
+     - Description: Updates a product with the specified ID.
+   - **Get Product by ID:** `/product/{id}` (GET)
+     - Description: Retrieves product details by ID.
+   - **Store Product:** `/product` (POST)
+     - Description: Stores a new product.
+   - **Delete Product:** `/product/{id}` (DELETE)
+     - Description: Deletes a product with the specified ID.
+   - **Get All Products:** `/products` (GET)
+     - Description: Retrieves all products.
 
-3. **Get All Categories**
-   - **Endpoint:** `/categories`
-   - **Method:** GET
-   - **Description:** Retrieves a list of all product categories.
+3. **Category Management**
+   - **Get Category by ID:** `/category/{id}` (GET)
+     - Description: Retrieves category details by ID.
+   - **Get All Categories:** `/categories` (GET)
+     - Description: Retrieves all categories.
+   - **Delete Category:** `/category/{id}` (DELETE)
+     - Description: Deletes a category with the specified ID.
+   - **Update Category:** `/category/{id}` (PUT)
+     - Description: Updates a category with the specified ID.
+   - **Store Category:** `/category` (POST)
+     - Description: Stores a new category.
 
-4. **Add Product to Shopping Cart**
-   - **Endpoint:** `/cart`
-   - **Method:** POST
-   - **Description:** Adds a product to the user's shopping cart.
+4. **Shopping Cart Management**
+   - **View Shopping Cart:** `/cart` (GET)
+     - Description: Retrieves the contents of the user's shopping cart.
+   - **Add Product to Cart:** `/cart` (POST)
+     - Description: Adds a product to the user's shopping cart.
+   - **Delete Product from Cart:** `/cart/product/{id}` (DELETE)
+     - Description: Removes a product from the user's shopping cart.
+   - **Empty Cart:** `/cart` (DELETE)
+     - Description: Empties the user's shopping cart.
+   - **Modify Cart:** `/cart/product/{id}` (PUT)
+     - Description: Modifies the quantity of a product in the user's shopping cart.
 
-5. **View Shopping Cart**
-   - **Endpoint:** `/cart`
-   - **Method:** GET
-   - **Description:** Retrieves the list of products in the user's shopping cart.
-
-6. **Delete Product from Shopping Cart**
-   - **Endpoint:** `/cart/{productID}`
-   - **Method:** DELETE
-   - **Description:** Removes a product from the user's shopping cart.
-
-7. **Checkout and Make Payment**
-   - **Endpoint:** `/checkout`
-   - **Method:** POST
-   - **Description:** Allows the user to complete the purchase and make payment transactions.
-
+5. **Checkout**
+   - **Checkout and Make Payment:** `/checkout` (POST)
+     - Description: Allows the user to complete the purchase and make payment transactions.
+   - **View Checkout History:** `/checkout/history` (GET)
+     - Description: Retrieves the user's checkout history.
+     
 ## How to Use
 
 ### Using Docker Compose

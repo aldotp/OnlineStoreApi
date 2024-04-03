@@ -11,7 +11,7 @@ func NewViper() *viper.Viper {
 	config.SetConfigType("env")
 
 	// Define possible paths to search for the .env file
-	possiblePaths := []string{"./", "./../"}
+	possiblePaths := []string{"./", "./../", "./../../"}
 	// Attempt to read the .env file from each possible path
 	var err error
 	for _, path := range possiblePaths {

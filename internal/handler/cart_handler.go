@@ -32,7 +32,7 @@ func NewCartHandler(cartSvc services.CartService, repoCart *repositories.CartRep
 
 func (c *CartHandler) AddToCart(w http.ResponseWriter, r *http.Request) {
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 	defer cancel()
 
 	userCtx, err := helper.GetUserCtx(ctx)
@@ -59,7 +59,7 @@ func (c *CartHandler) AddToCart(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		helper.ErrorJSON(helper.Response{
 			Code:    http.StatusInternalServerError,
-			Message: "cannot add to cart",
+			Message: err.Error(),
 		}, w, http.StatusInternalServerError)
 		return
 	}
@@ -118,7 +118,7 @@ func (c *CartHandler) DeleteProductFromCart(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	pathParam := mux.Vars(r)["productID"]
+	pathParam := mux.Vars(r)["id"]
 	productID, err := strconv.Atoi(pathParam)
 	if err != nil {
 		helper.ErrorJSON(helper.Response{
@@ -146,4 +146,85 @@ func (c *CartHandler) DeleteProductFromCart(w http.ResponseWriter, r *http.Reque
 		Message: "Delete Product from Cart Success",
 	})
 
+}
+
+func (c *CartHandler) EmptyCart(w http.ResponseWriter, r *http.Request) {
+
+	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+	defer cancel()
+
+	userCtx, err := helper.GetUserCtx(ctx)
+	if err != nil {
+		helper.ErrorJSON(helper.Response{
+			Code:    http.StatusUnauthorized,
+			Message: "unauthorized",
+		}, w, http.StatusUnauthorized)
+		return
+	}
+
+	err = c.cartSvc.EmptyCart(ctx, userCtx.ID)
+	if err != nil {
+		helper.ErrorJSON(helper.Response{
+			Code:    http.StatusInternalServerError,
+			Message: "cannot empty cart",
+		}, w, http.StatusInternalServerError)
+		return
+	}
+
+	helper.WriteJSON(w, http.StatusOK, helper.Response{
+		Code:    http.StatusOK,
+		Message: "Empty Cart Success",
+	})
+}
+
+func (c *CartHandler) ModifyCart(w http.ResponseWriter, r *http.Request) {
+
+	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+	defer cancel()
+
+	userCtx, err := helper.GetUserCtx(ctx)
+	if err != nil {
+		helper.ErrorJSON(helper.Response{
+			Code:    http.StatusUnauthorized,
+			Message: "unauthorized",
+		}, w, http.StatusUnauthorized)
+		return
+	}
+
+	pathParam := mux.Vars(r)["id"]
+	productID, err := strconv.Atoi(pathParam)
+	if err != nil {
+		helper.ErrorJSON(helper.Response{
+			Code:    http.StatusBadRequest,
+			Message: "invalid product id",
+		}, w, http.StatusBadRequest)
+		return
+	}
+
+	var request model.ModifyCartRequest
+
+	err = json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		helper.ErrorJSON(helper.Response{
+			Code:    http.StatusBadRequest,
+			Message: "invalid json body",
+		}, w, http.StatusBadRequest)
+		return
+	}
+
+	request.ProductID = productID
+
+	err = c.cartSvc.ModifyCart(ctx, request, userCtx.ID)
+	if err != nil {
+		helper.ErrorJSON(helper.Response{
+			Code:    http.StatusInternalServerError,
+			Message: "cannot modify cart",
+		}, w, http.StatusInternalServerError)
+		return
+	}
+
+	helper.WriteJSON(w, http.StatusOK, helper.Response{
+		Code:    http.StatusOK,
+		Message: "Modify Cart Success",
+	})
 }
